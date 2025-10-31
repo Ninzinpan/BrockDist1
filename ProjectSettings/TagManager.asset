@@ -8,6 +8,8 @@ TagManager:
   - Ground
   - Opponent
   - Top
+  - PlayerForOpponent
+  - Thorn
   layers:
   - Default
   - TransparentFX
