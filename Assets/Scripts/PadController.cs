@@ -7,13 +7,14 @@ using UnityEngine.SceneManagement; // ★ 1. これを追加
 [RequireComponent(typeof(PlayerStats))]
 public class PadController : MonoBehaviour
 {
-    // (Movement, Ball Launching, Ball Limit, Player Stats の変数は変更なし)
     [Header("Movement")]
     public float boundary = 8f;
     private Rigidbody2D rb;
+
     [Header("Ball Launching")]
     public GameObject ballPrefab;
     public Transform spawnPoint;
+
     [Header("Player Stats")]
     public float invincibilityDuration = 1f;
 
@@ -22,7 +23,7 @@ public class PadController : MonoBehaviour
     // public Slider hpBarSlider; 
     private Slider hpBarSlider; // private に変更
 
-    // (内部変数, コンポーネント参照 も変更なし)
+    // (内部変数)
     private float currentHp;
     private bool isInvincible = false;
     private bool isAlive = true;
@@ -30,6 +31,8 @@ public class PadController : MonoBehaviour
     private Color originalColor;
     private float spawnTimer;
     private PlayerStats playerStats; 
+
+    public bool IsDebugMode = true; // デバッグ用フラグ
 
     void Start()
     {
@@ -57,13 +60,14 @@ public class PadController : MonoBehaviour
         FindAndAssignHPBar();
     }
     
-    // ★ 6. 以下の2つのメソッドをまるごと追加
+    // ★ 6. 以下の3つのメソッドをまるごと追加
     
     /// <summary>
     /// オブジェクト破棄時にイベント購読を解除
     /// </summary>
     void OnDestroy()
     {
+        // イベントの購読を解除（メモリリーク防止）
         SceneManager.sceneLoaded -= OnSceneLoaded;
         if (playerStats != null)
         {
@@ -85,9 +89,12 @@ public class PadController : MonoBehaviour
     /// </summary>
     private void FindAndAssignHPBar()
     {
+        // "HPBar" タグを持つゲームオブジェクトを探す
         GameObject hpBarGO = GameObject.FindGameObjectWithTag("HPBar");
+        
         if (hpBarGO != null)
         {
+            // 見つけたオブジェクトから Slider コンポーネントを取得
             hpBarSlider = hpBarGO.GetComponent<Slider>();
             if (hpBarSlider != null)
             {
@@ -120,6 +127,13 @@ public class PadController : MonoBehaviour
     }
     void Update()
     {
+        if ( IsDebugMode)
+        {
+            print("Current HP: " + currentHp + " / " + playerStats.CurrentMaxHp);
+            print("Current Max Balls: "+  + playerStats.CurrentMaxBalls);
+            print("Current Spawn Interval: " + spawnTimer + "/" + playerStats.CurrentSpawnInterval);
+            print("Current ball damage: " + playerStats.CurrentBallDamage);
+        }   
         if (!isAlive) return; 
         HandleSpawning();
     }
@@ -183,14 +197,14 @@ public class PadController : MonoBehaviour
     }
     private void UpdateHpBar()
     {
-        if (hpBarSlider != null) // nullチェックは既にあるのでOK
+        if (hpBarSlider != null) 
         {
             hpBarSlider.value = currentHp;
         }
     }
     private void UpdateHpBarMax()
     {
-        if (hpBarSlider != null) // nullチェックは既にあるのでOK
+        if (hpBarSlider != null)
         {
             hpBarSlider.maxValue = playerStats.CurrentMaxHp;
             if(currentHp > playerStats.CurrentMaxHp)

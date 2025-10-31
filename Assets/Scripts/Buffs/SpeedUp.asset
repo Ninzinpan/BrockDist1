@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   buffName: Speed Up
   buffIcon: {fileID: -841725066855264754, guid: 063578b81847f40c3ab2408909ec84a0, type: 3}
-  isOneTimeEffect: 1
+  isOneTimeEffect: 0
   statToBuff: 4
   enhancementValue: 10
