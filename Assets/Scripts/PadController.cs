@@ -32,7 +32,7 @@ public class PadController : MonoBehaviour
     private float spawnTimer;
     private PlayerStats playerStats; 
 
-    public bool IsDebugMode = true; // デバッグ用フラグ
+    public bool IsDebugMode = false; // デバッグ用フラグ
 
     void Start()
     {
@@ -127,13 +127,7 @@ public class PadController : MonoBehaviour
     }
     void Update()
     {
-        if ( IsDebugMode)
-        {
-            print("Current HP: " + currentHp + " / " + playerStats.CurrentMaxHp);
-            print("Current Max Balls: "+  + playerStats.CurrentMaxBalls);
-            print("Current Spawn Interval: " + spawnTimer + "/" + playerStats.CurrentSpawnInterval);
-            print("Current ball damage: " + playerStats.CurrentBallDamage);
-        }   
+  
         if (!isAlive) return; 
         HandleSpawning();
     }

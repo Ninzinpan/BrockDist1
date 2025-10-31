@@ -1,102 +1,105 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement; // ★ 1. using は必要
+using UnityEngine.SceneManagement;
 using Random = UnityEngine.Random; 
 
 public class GameManager : MonoBehaviour
 {
-    [Header("Buff Database")]
-    public List<BuffData> allBuffDatabase; 
+    // ★ 1. 全バフリストは削除
+    // public List<BuffData> allBuffDatabase; 
 
     [Header("Required Components")]
-    public UpgradeUIManager upgradeUI; 
+    public UpgradeUIManager upgradeUI; // 永続UIへの参照
 
     // --- 内部変数 ---
     private int currentEnemyCount;
     private PlayerStats playerStats;
+    private StageData currentStageData; // ★ 2. 現在のステージ設計図を保持
 
     public static GameManager Instance { get; private set; }
 
     void Awake()
     {
-        // 1. シングルトン設定
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return; 
         }
         Instance = this;
-
-        // 2. このオブジェクトをシーン移動で破棄しない
         DontDestroyOnLoad(gameObject);
     }
 
-void Start()
+    void Start()
     {
-        // 1. PlayerStatsへの参照を取得
         playerStats = FindFirstObjectByType<PlayerStats>();
         if (playerStats == null)
         {
             Debug.LogError("シーンに PlayerStats が見つかりません！");
         }
 
-        // 2. シーンがロードされた時に実行するイベントを購読
+        // シーンがロードされた時に実行するイベントを購読
         SceneManager.sceneLoaded += OnSceneLoaded; 
         
-        // 3. 最初のシーン（Stage1）の情報をロード
+        // 最初のシーン（Stage1）の情報をロード
         OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
     }
 
-    // --- ★ 3. おそらく、このメソッドがまるごと抜けています ---
+    void OnDestroy()
+    {
+        // イベント購読を解除
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
     /// <summary>
-    /// シーンがロードされるたびに自動的に呼び出されるメソッド
+    /// シーンがロードされるたびに呼び出されるメソッド
     /// </summary>
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // ★ 1. まずゲームを一時停止！
-        Time.timeScale = 0f;
-
-        // 2. このシーンの「UpgradeUIManager」を探す
-        upgradeUI = FindFirstObjectByType<UpgradeUIManager>(); 
-        if (upgradeUI == null)
+        // ★ 3. 新しいシーンの SceneDataLink を探す
+        SceneDataLink dataLink = FindFirstObjectByType<SceneDataLink>();
+        if (dataLink != null)
         {
-            Debug.LogWarning("このシーン(" + scene.name + ")には UpgradeUIManager がありません。");
+            // 発見したら、現在のステージ設計図として保持
+            currentStageData = dataLink.currentStageData;
         }
         else
+        {
+            Debug.LogError("このシーン(" + scene.name + ")に SceneDataLink がありません！");
+            currentStageData = null; // 安全のため null に
+        }
+
+        // 4. アップグレードUIへの参照を取得（永続化UIの場合）
+        if (upgradeUI == null) // まだ参照がなければ探す
+        {
+            upgradeUI = FindFirstObjectByType<UpgradeUIManager>(); 
+        }
+        if (upgradeUI != null)
         {
             upgradeUI.gameObject.SetActive(false); // UIを隠しておく
         }
 
-        // 3. このシーンの「StageStartDisplay」を探す
+        // 5. ステージ開始UIを探して起動
+        Time.timeScale = 0f;
         StageStartDisplay stageStartUI = FindFirstObjectByType<StageStartDisplay>();
         if (stageStartUI != null)
         {
-            // ★ 4. ステージ開始UIにシーケンス開始を命令
             stageStartUI.gameObject.SetActive(true);
-            stageStartUI.StartSequence(scene.name); // (シーン名をそのまま "Stage1" のように表示)
+            
+            // ★ 6. StageData の「表示名キー」をそのまま渡す
+            // (L10n不採用のため、"Stage 1" などの文字列がそのまま表示される)
+            string displayName = (currentStageData != null) ? currentStageData.stageDisplayNameKey : scene.name;
+            stageStartUI.StartSequence(displayName);
         }
         else
         {
-            // ★ 5. もし開始UIがなければ、即座にゲームを開始
-            Debug.LogWarning("このシーン(" + scene.name + ")には StageStartDisplay がありません。");
             Time.timeScale = 1f; 
         }
 
-        // 6. 新しいシーンの敵の数を数える
+        // 7. 新しいシーンの敵の数を数える
         currentEnemyCount = FindObjectsByType<Opponent>(FindObjectsSortMode.None).Length;
         Debug.Log(scene.name + " の敵の数: " + currentEnemyCount);
     }
-
-    // --- ★ 4. このメソッドも必要です ---
-    /// <summary>
-    /// オブジェクトが破棄される時（ゲーム終了時など）に呼ばれる
-    /// </summary>
-    void OnDestroy()
-    {
-        // メモリリーク防止のため、イベントの予約を解除
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-    }
-
 
     /// <summary>
     /// 敵が倒された時に Opponent.cs から呼ばれる
@@ -107,8 +110,16 @@ void Start()
 
         if (currentEnemyCount <= 0)
         {
-            ShowUpgradeChoices();
+
+            StartCoroutine(ShowUpgradeChoicesAfterDelay(0.5f));
         }
+            
+    }
+
+    private IEnumerator ShowUpgradeChoicesAfterDelay(float delay)
+    {
+        yield return new WaitForSecondsRealtime(delay);
+        ShowUpgradeChoices();
     }
 
     /// <summary>
@@ -116,18 +127,22 @@ void Start()
     /// </summary>
     private void ShowUpgradeChoices()
     {
-        if (allBuffDatabase == null || allBuffDatabase.Count == 0)
+        // ★ 7. 「全バフリスト」の代わりに「現在のステージのバフリスト」を参照
+        if (currentStageData == null || currentStageData.availableBuffs == null || currentStageData.availableBuffs.Count == 0)
         {
-            Debug.LogError("GameManager の All Buff Database が空です！");
+            Debug.LogError("現在の StageData にバフが設定されていません！");
             return;
         }
 
-        // (重複なしのロジック...)
+        List<BuffData> buffPool = currentStageData.availableBuffs;
+        
         BuffData choice1, choice2, choice3;
 
-        if (allBuffDatabase.Count >= 3)
+        // 登録バフが3種類以上あるか？
+        if (buffPool.Count >= 3)
         {
-            List<BuffData> availableBuffs = new List<BuffData>(allBuffDatabase);
+            // 重複なしロジック
+            List<BuffData> availableBuffs = new List<BuffData>(buffPool);
 
             int index1 = Random.Range(0, availableBuffs.Count);
             choice1 = availableBuffs[index1];
@@ -142,18 +157,32 @@ void Start()
         }
         else
         {
-            choice1 = allBuffDatabase[Random.Range(0, allBuffDatabase.Count)];
-            choice2 = allBuffDatabase[Random.Range(0, allBuffDatabase.Count)];
-            choice3 = allBuffDatabase[Random.Range(0, allBuffDatabase.Count)];
+            // 安全装置：重複を許可
+            choice1 = buffPool[Random.Range(0, buffPool.Count)];
+            choice2 = buffPool[Random.Range(0, buffPool.Count)];
+            choice3 = buffPool[Random.Range(0, buffPool.Count)];
         }
         
         if (upgradeUI != null && playerStats != null)
         {
             upgradeUI.DisplayChoices(playerStats, choice1, choice2, choice3);
         }
-        else if (upgradeUI == null)
+    }
+
+    // ★ 8. 新しいメソッドを追加
+    /// <summary>
+    /// UpgradeUIManager から呼ばれ、次のステージに進む
+    /// </summary>
+    public void LoadNextStage()
+    {
+        if (currentStageData != null && !string.IsNullOrEmpty(currentStageData.nextSceneName))
         {
-            Debug.LogError("UpgradeUI が null のため、選択肢を表示できません。");
+            SceneManager.LoadScene(currentStageData.nextSceneName);
+        }
+        else
+        {
+            Debug.LogError("次のステージ名(Next Scene Name)が StageData に設定されていません！");
+            // (オプション) 無限ループやタイトルに戻る処理
         }
     }
 

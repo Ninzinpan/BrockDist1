@@ -16,4 +16,4 @@ MonoBehaviour:
   buffIcon: {fileID: -841725066855264754, guid: 063578b81847f40c3ab2408909ec84a0, type: 3}
   isOneTimeEffect: 0
   statToBuff: 1
-  enhancementValue: 10
+  enhancementValue: -0.2
