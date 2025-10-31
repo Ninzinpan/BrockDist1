@@ -1,68 +1,59 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UI; // ★1. UIコンポーネント（Slider）を使うために必要
+using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(PlayerStats))]
 public class PadController : MonoBehaviour
 {
     [Header("Movement")]
-    public float speed = 10f;
+    // public float speed = 10f; // ← ★ 1. 削除（PlayerStatsへ移管）
     public float boundary = 8f;
     private Rigidbody2D rb;
 
     [Header("Ball Launching")]
     public GameObject ballPrefab;
     public Transform spawnPoint;
-    public float spawnInterval = 0.5f;
 
     [Header("Ball Limit")]
-    public int maxBalls = 10;
+    // (PlayerStatsが管理)
 
     [Header("Player Stats")]
-    public float maxHp = 3f; // 最大HP
-    public float invincibilityDuration = 1f; // 無敵時間
-    
-    // --- ここから追加 ---
-    [Header("UI")]
-    public Slider hpBarSlider; // ★2. InspectorからHPバー（Slider）を受け取る変数
-    // --- 追加ここまで ---
+    public float invincibilityDuration = 1f;
 
+    [Header("UI")]
+    public Slider hpBarSlider; 
+
+    // --- 内部変数 ---
     private float currentHp;
     private bool isInvincible = false;
-    private bool isAlive = true; // 生きているか
+    private bool isAlive = true;
     
-    private SpriteRenderer spriteRenderer; // 色を変えるため
+    private SpriteRenderer spriteRenderer;
     private Color originalColor;
-
     private float spawnTimer;
+
+    // --- コンポーネント参照 ---
+    private PlayerStats playerStats; 
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         spawnTimer = 0f;
-        
-        currentHp = maxHp;
         isAlive = true;
         isInvincible = false;
+        
+        playerStats = GetComponent<PlayerStats>();
+        currentHp = playerStats.CurrentMaxHp; 
         
         spriteRenderer = GetComponent<SpriteRenderer>(); 
         if(spriteRenderer != null)
         {
             originalColor = spriteRenderer.color;
         }
-
-        // --- ここから追加 ---
-        // ★3. HPバーの初期設定
-        if (hpBarSlider != null)
-        {
-            hpBarSlider.maxValue = maxHp; // Sliderの最大値をmaxHpと同期
-            hpBarSlider.value = currentHp;  // Sliderの現在値をcurrentHpと同期
-        }
-        else
-        {
-            Debug.LogWarning("HPBar SliderがPadControllerに設定されていません！");
-        }
-        // --- 追加ここまで ---
+        
+        UpdateHpBar();
+        playerStats.OnStatsRecalculated.AddListener(UpdateHpBarMax);
     }
 
     void FixedUpdate() 
@@ -79,11 +70,15 @@ public class PadController : MonoBehaviour
 
     private void HandleMovement()
     {
+        // ★ 2. PlayerStats の CurrentSpeed を参照するように変更
         float moveInput = Input.GetAxis("Horizontal");
-        Vector2 newPosition = rb.position + Vector2.right * moveInput * speed * Time.fixedDeltaTime;
+        Vector2 newPosition = rb.position + Vector2.right * moveInput * playerStats.CurrentSpeed * Time.fixedDeltaTime;
         newPosition.x = Mathf.Clamp(newPosition.x, -boundary, boundary);
         rb.MovePosition(newPosition);
     }
+
+    // (HandleSpawning, LaunchBallTowardsMouse, TakeDamage, Heal, 
+    //  UpdateHpBar, UpdateHpBarMax, InvincibilityRoutine, Die は変更なし)
 
     private void HandleSpawning()
     {
@@ -94,13 +89,13 @@ public class PadController : MonoBehaviour
         
         if (Input.GetMouseButton(0) && spawnTimer <= 0f)
         {
-            if (Ball.currentBallCount >= maxBalls)
+            if (Ball.currentBallCount >= playerStats.CurrentMaxBalls)
             {
                 return; 
             }
             
             LaunchBallTowardsMouse();
-            spawnTimer = spawnInterval;
+            spawnTimer = playerStats.CurrentSpawnInterval; 
         }
     }
 
@@ -120,25 +115,12 @@ public class PadController : MonoBehaviour
             Debug.LogError("Ball prefabに 'Ball' スクリプトがありません！");
         }
     }
-
+    
     public void TakeDamage(float amount)
     {
-        if (isInvincible || !isAlive)
-        {
-            return;
-        }
-
+        if (isInvincible || !isAlive) return;
         currentHp -= amount;
-        Debug.Log("Player HP: " + currentHp);
-
-        // --- ここから追加 ---
-        // ★4. ダメージを受けた時にHPバーの現在値を更新
-        if (hpBarSlider != null)
-        {
-            hpBarSlider.value = currentHp;
-        }
-        // --- 追加ここまで ---
-
+        UpdateHpBar(); 
         if (currentHp <= 0)
         {
             Die();
@@ -148,7 +130,35 @@ public class PadController : MonoBehaviour
             StartCoroutine(InvincibilityRoutine());
         }
     }
-
+    
+    public void Heal(float amount)
+    {
+        if (!isAlive) return;
+        currentHp = Mathf.Min(currentHp + amount, playerStats.CurrentMaxHp);
+        UpdateHpBar();
+    }
+    
+    private void UpdateHpBar()
+    {
+        if (hpBarSlider != null)
+        {
+            hpBarSlider.value = currentHp;
+        }
+    }
+    
+    private void UpdateHpBarMax()
+    {
+        if (hpBarSlider != null)
+        {
+            hpBarSlider.maxValue = playerStats.CurrentMaxHp;
+            if(currentHp > playerStats.CurrentMaxHp)
+            {
+                currentHp = playerStats.CurrentMaxHp;
+                UpdateHpBar();
+            }
+        }
+    }
+    
     private IEnumerator InvincibilityRoutine()
     {
         isInvincible = true;
@@ -169,7 +179,7 @@ public class PadController : MonoBehaviour
         }
         isInvincible = false;
     }
-
+    
     private void Die()
     {
         isAlive = false;
@@ -177,6 +187,5 @@ public class PadController : MonoBehaviour
         {
             spriteRenderer.color = Color.gray;
         }
-        Debug.Log("プレイヤーは動けなくなりました");
     }
 }

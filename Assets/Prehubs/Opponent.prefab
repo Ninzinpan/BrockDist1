@@ -104,6 +104,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHp: 10
   moveSpeed: 0.5
+  damageToPlayer: 1
   flashColor: {r: 1, g: 0, b: 0, a: 1}
   invincibleDuration: 0.2
 --- !u!50 &8412205364422354722

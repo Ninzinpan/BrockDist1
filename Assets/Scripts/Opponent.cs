@@ -10,7 +10,7 @@ public class Opponent : MonoBehaviour
     public float moveSpeed = 1f;
 
     [Header("On Ground Contact")]
-    public float damageToPlayer = 1f; // プレイヤーに与えるダメージ
+    public float damageToPlayer = 1f; 
 
     [Header("Damage Effect")]
     public Color flashColor = Color.red;
@@ -25,7 +25,10 @@ public class Opponent : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private Color originalColor;
     
-    private PadController player; // プレイヤーへの参照を保持
+    // --- 参照 ---
+    private PadController player;
+    private PlayerStats playerStats;
+    private GameManager gameManager; // ★ 1. GameManager への参照を追加
 
     void Awake()
     {
@@ -40,15 +43,14 @@ public class Opponent : MonoBehaviour
         isMoving = true;
         isInvincible = false;
         
-        // --- ★ここが修正点です ---
-        // 'FindObjectOfType' を 'FindFirstObjectByType' に変更
+        // シーン全体から必要なコンポーネントを探す
         player = FindFirstObjectByType<PadController>();
-        // --- 修正ここまで ---
+        playerStats = FindFirstObjectByType<PlayerStats>();
+        gameManager = FindFirstObjectByType<GameManager>(); // ★ 2. GameManager を探す
 
-        if (player == null)
-        {
-            Debug.LogError("シーンに PadController が見つかりません！");
-        }
+        if (player == null) Debug.LogError("シーンに PadController が見つかりません！", this);
+        if (playerStats == null) Debug.LogError("シーンに PlayerStats が見つかりません！", this);
+        if (gameManager == null) Debug.LogError("シーンに GameManager が見つかりません！", this);
     }
 
     void FixedUpdate()
@@ -58,14 +60,19 @@ public class Opponent : MonoBehaviour
             rb.linearVelocity = Vector2.down * moveSpeed;
         }
     }
-
-    // (OnCollisionEnter2D, HandleDamage, InvincibleFlashRoutine, Die メソッドは変更なし)
     
     void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Ball"))
         {
-            HandleDamage();
+            if (playerStats != null)
+            {
+                HandleDamage(playerStats.CurrentBallDamage);
+            }
+            else
+            {
+                HandleDamage(1f); 
+            }
         }
         
         if (collision.gameObject.CompareTag("Ground"))
@@ -82,13 +89,12 @@ public class Opponent : MonoBehaviour
         }
     }
     
-    private void HandleDamage()
+    private void HandleDamage(float damageAmount)
     {
-        if (isInvincible || currentHp <= 0)
-        {
-            return;
-        }
-        currentHp--;
+        if (isInvincible || currentHp <= 0) return;
+
+        currentHp -= damageAmount; 
+        
         if (currentHp <= 0)
         {
             Die();
@@ -110,6 +116,15 @@ public class Opponent : MonoBehaviour
 
     private void Die()
     {
+        // ★ 3. 死亡処理
+        
+        // 1. GameManager に死亡を報告
+        if (gameManager != null)
+        {
+            gameManager.OnEnemyDefeated();
+        }
+
+        // 2. 自分自身を消滅させる
         Destroy(gameObject);
     }
 }
