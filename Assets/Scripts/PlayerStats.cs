@@ -20,7 +20,7 @@ public class PlayerStats : MonoBehaviour
     public int CurrentMaxBalls { get; private set; }
     public float CurrentBallDamage { get; private set; }
     public float CurrentSpeed { get; private set; }
-
+    public static PlayerStats Instance { get; private set; }
     // --- イベント ---
     public UnityEvent OnStatsRecalculated;
 
@@ -29,6 +29,17 @@ public class PlayerStats : MonoBehaviour
 
     void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+        // 既にPad/PlayerStatsが存在する場合、
+        // この（新しくロードされた）Padを破棄
+        Destroy(gameObject);
+        return; // Awakeの残り処理を中断
+        }
+    Instance = this;
+
+    // 2. このオブジェクト（Pad）をシーン移動で破棄しない
+    DontDestroyOnLoad(gameObject);
         // ★ 2. PadController への参照を取得
         padController = GetComponent<PadController>(); 
         if(padController == null)
