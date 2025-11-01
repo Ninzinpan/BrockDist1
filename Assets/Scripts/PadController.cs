@@ -5,6 +5,8 @@ using UnityEngine.SceneManagement; // ★ 1. これを追加
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(PlayerStats))]
+[RequireComponent(typeof(AudioSource))] // ★ 1. AudioSource が必須であることを明記
+
 public class PadController : MonoBehaviour
 {
     [Header("Movement")]
@@ -23,6 +25,12 @@ public class PadController : MonoBehaviour
     // public Slider hpBarSlider; 
     private Slider hpBarSlider; // private に変更
 
+    [Header("Audio")]
+    public AudioClip shootSound; // Inspectorで設定する音ファイル
+
+    private AudioSource audioSource; // スピーカーコンポーネント
+
+
     // (内部変数)
     private float currentHp;
     private bool isInvincible = false;
@@ -34,6 +42,10 @@ public class PadController : MonoBehaviour
 
     public bool IsDebugMode = false; // デバッグ用フラグ
 
+    void Awake()
+    {
+        audioSource = GetComponent<AudioSource>();
+    }
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -163,7 +175,13 @@ public class PadController : MonoBehaviour
         if (ballScript != null)
         {
             ballScript.Launch(launchDirection);
+            // ★ 7. 発射音を再生
+            if (shootSound != null)
+            {
+                audioSource.PlayOneShot(shootSound);
+            }
         }
+
         else
         {
             Debug.LogError("Ball prefabに 'Ball' スクリプトがありません！");

@@ -11,6 +11,7 @@ TagManager:
   - PlayerForOpponent
   - Thorn
   - HPBar
+  - XPBar
   layers:
   - Default
   - TransparentFX

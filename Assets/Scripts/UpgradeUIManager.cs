@@ -122,6 +122,9 @@ public class UpgradeUIManager : MonoBehaviour
     /// <summary>
     /// いずれかのボタンが押された時に呼ばれる
     /// </summary>
+    /// <summary>
+    /// いずれかのボタンが押された時に呼ばれる
+    /// </summary>
     private void OnChoiceMade(BuffData chosenBuff)
     {
         // 1. PlayerStats に選んだバフを渡す
@@ -133,10 +136,11 @@ public class UpgradeUIManager : MonoBehaviour
         // 2. UIを非表示にする
         gameObject.SetActive(false);
         
-        // 3. ゲーム時間を戻す
+        // 3. ゲーム時間を戻す（★これは残す）
         Time.timeScale = 1f;
 
-        // ★ 4. 修正点：GameManager に次のステージをロードするよう命令
+        // ★ 4. シーン遷移のロジックを削除（またはコメントアウト）
+        /*
         if (gameManager != null)
         {
             gameManager.LoadNextStage();
@@ -145,5 +149,6 @@ public class UpgradeUIManager : MonoBehaviour
         {
             Debug.LogError("GameManager が null のため、次のステージに進めません！");
         }
+        */
     }
 }

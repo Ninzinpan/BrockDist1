@@ -2,20 +2,33 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI; // ★ 1. Slider を使うために必要
 using Random = UnityEngine.Random; 
 
 public class GameManager : MonoBehaviour
 {
-    [Header("UI References (Must be persistent)")]
-    // (Inspectorから設定するのではなく、Start() で探すように変更)
+    [Header("UI References (Persistent)")]
     private UpgradeUIManager upgradeUI; 
-    private GameOverUI gameOverUI; // ★ 1. 変数として保持
+    private GameOverUI gameOverUI; 
+
+    // --- ★ 2. ここから XP の設定を追加 ---
+    [Header("XP Scaling")]
+    public int baseKillsNeeded = 10; // 最初のレベルアップに必要な討伐数
+    public int additionalKillsPerLevel = 5; // レベルアップごとに追加で必要になる討伐数
+    // --- 追加ここまで ---
 
     // --- 内部変数 ---
-    private int currentEnemyCount;
     private PlayerStats playerStats;
     private StageData currentStageData; 
     private bool isGameOver = false;
+
+    // --- ★ 3. XP関連の内部変数を追加 ---
+    private int currentKillCount;  // 現在の討伐数（XP）
+    private int killsNeededForLevelUp; // 次のレベルアップに必要な討伐数
+    private int upgradeCount; // アップグレード（レベルアップ）した回数
+    
+    private Slider xpBarSlider; // ★ 4. XPバーのSliderへの参照
+    // ---
 
     public static GameManager Instance { get; private set; }
 
@@ -32,15 +45,14 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        // --- ★ 2. 永続化オブジェクトへの参照を「最初」に1回だけ取得 ---
+        // 永続化オブジェクトへの参照を「最初」に1回だけ取得
         playerStats = PlayerStats.Instance;
-        upgradeUI = UpgradeUIManager.Instance; // (UpgradeUIManagerもシングルトン前提)
-        gameOverUI = GameOverUI.Instance; // (GameOverUIもシングルトン前提)
+        upgradeUI = UpgradeUIManager.Instance; 
+        gameOverUI = GameOverUI.Instance; 
         
         if (playerStats == null) Debug.LogError("PlayerStats が見つかりません！");
         if (upgradeUI == null) Debug.LogError("UpgradeUIManager が見つかりません！");
         if (gameOverUI == null) Debug.LogError("GameOverUI が見つかりません！");
-        // ---
 
         SceneManager.sceneLoaded += OnSceneLoaded; 
         OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
@@ -56,13 +68,13 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        isGameOver = false; // ★ 3. ゲームオーバー状態をリセット
+        isGameOver = false; 
         
-        // 4. 永続化UIを隠す
+        // 永続化UIを隠す
         if (upgradeUI != null) upgradeUI.gameObject.SetActive(false);
-        if (gameOverUI != null) gameOverUI.Hide(); // ★ 4. GameOverUIを隠す
+        if (gameOverUI != null) gameOverUI.Hide(); 
 
-        // 5. 現在のステージの設計図を取得
+        // ステージ設計図を取得
         SceneDataLink dataLink = FindFirstObjectByType<SceneDataLink>();
         if (dataLink != null)
         {
@@ -74,7 +86,7 @@ public class GameManager : MonoBehaviour
             currentStageData = null;
         }
 
-        // 6. ステージ開始UIを探して起動
+        // ステージ開始UIを起動
         Time.timeScale = 0f;
         StageStartDisplay stageStartUI = FindFirstObjectByType<StageStartDisplay>();
         if (stageStartUI != null)
@@ -88,21 +100,83 @@ public class GameManager : MonoBehaviour
             Time.timeScale = 1f; 
         }
 
-        // 7. 新しいシーンの敵の数を数える
-        currentEnemyCount = FindObjectsByType<Opponent>(FindObjectsSortMode.None).Length;
+        // --- ★ 5. 敵の数ではなく、XPシステムを初期化 ---
+        currentKillCount = 0;
+        upgradeCount = 0; 
+        killsNeededForLevelUp = baseKillsNeeded;
+
+        // ★ 6. XPバーを探して初期化
+        GameObject xpBarGO = GameObject.FindGameObjectWithTag("XPBar");
+        if (xpBarGO != null)
+        {
+            xpBarSlider = xpBarGO.GetComponent<Slider>();
+            if (xpBarSlider != null)
+            {
+                xpBarSlider.maxValue = killsNeededForLevelUp;
+                xpBarSlider.value = 0;
+            }
+        }
+        else
+        {
+            Debug.LogWarning("このシーンに 'XPBar' タグのオブジェクトがありません");
+            xpBarSlider = null;
+        }
+        // ---
     }
 
     /// <summary>
-    /// PadController から呼ばれ、ゲームオーバー処理を開始する
+    /// 敵が倒された時に Opponent.cs から呼ばれる
     /// </summary>
+    public void OnEnemyDefeated()
+    {
+        if (isGameOver) return; // ゲームオーバー後はカウントしない
+
+        // --- ★ 7. 敵カウントダウンから、XPカウントアップ処理に変更 ---
+
+        // 1. 討伐数（XP）を加算
+        currentKillCount++;
+
+        // 2. XPバーのUIを更新
+        if (xpBarSlider != null)
+        {
+            xpBarSlider.value = currentKillCount;
+        }
+
+        // 3. レベルアップ判定
+        if (currentKillCount >= killsNeededForLevelUp)
+        {
+            // 4. アップグレードUIを表示 (UI側が Time.timeScale = 0 にする)
+            ShowUpgradeChoices(); 
+
+            // 5. XPとレベルをリセット・再計算
+            currentKillCount = 0; // XPをリセット
+            upgradeCount++; // アップグレード回数を増やす
+
+            // 6. 次の目標値を計算（線形増加）
+            killsNeededForLevelUp = baseKillsNeeded + (additionalKillsPerLevel * upgradeCount);
+            
+            // 7. UIの最大値と現在値を更新
+            if (xpBarSlider != null)
+            {
+                xpBarSlider.maxValue = killsNeededForLevelUp;
+                xpBarSlider.value = currentKillCount; // 0に戻す
+            }
+        }
+        // --- 
+    }
+    
+    // (StartGameOverSequence, GameOverRoutine, RestartStage は変更なし)
+    
     public void StartGameOverSequence()
     {
-        if (isGameOver) return;
+        if (isGameOver) return; 
         isGameOver = true;
+        StartCoroutine(GameOverRoutine());
+    }
 
-
-
-        // 永続化されている GameOverUI を表示
+    private IEnumerator GameOverRoutine()
+    {
+        yield return new WaitForSeconds(1.0f);
         if (gameOverUI != null)
         {
             gameOverUI.Show();
@@ -113,30 +187,16 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// GameOverUI から呼ばれ、ステージをリスタートする
-    /// </summary>
     public void RestartStage()
     {
-        // 1. PlayerStats (と Pad) の状態をリセット
         if (PlayerStats.Instance != null)
         {
             PlayerStats.Instance.ResetPlayerState();
         }
-
-        // 2. 現在のシーン名を再度読み込む
-        // (OnSceneLoaded が自動で呼ばれ、UIが隠されたり敵がカウントされる)
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
-    
-    // (OnEnemyDefeated, ShowUpgradeChoices, LoadNextStage, OnEnemySpawned は変更なし)
-    
-    public void OnEnemyDefeated()
-    {
-        if (isGameOver) return; // ゲームオーバー後はカウントしない
-        currentEnemyCount--;
-        if (currentEnemyCount <= 0) ShowUpgradeChoices();
-    }
+
+    // (ShowUpgradeChoices, LoadNextStage, OnEnemySpawned は変更なし)
     
     private void ShowUpgradeChoices()
     {
@@ -185,6 +245,7 @@ public class GameManager : MonoBehaviour
     
     public void OnEnemySpawned()
     {
-        currentEnemyCount++;
+        // (このメソッドは現在使われていないが、将来のスポナーのために残しておく)
+        // currentEnemyCount++; 
     }
 }
