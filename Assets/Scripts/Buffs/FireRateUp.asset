@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: FireRateUp
   m_EditorClassIdentifier: 
   buffName: Fire Rate Up
-  buffIcon: {fileID: -841725066855264754, guid: 063578b81847f40c3ab2408909ec84a0, type: 3}
+  buffIcon: {fileID: 6721010259037825514, guid: 6c4d2ce214a374d75bf2ffae38cc1067, type: 3}
   isOneTimeEffect: 0
   statToBuff: 1
   enhancementValue: -0.2

@@ -17,5 +17,6 @@ MonoBehaviour:
   availableBuffs:
   - {fileID: 11400000, guid: ec4775087273145a3b7fb29bf9c2cae4, type: 2}
   - {fileID: 11400000, guid: cc3c500a4d1c6493c9bab72c4e5f488e, type: 2}
-  - {fileID: 11400000, guid: 30a881979a6a7499f9900418eb38493d, type: 2}
   - {fileID: 11400000, guid: 0ed633c129fbd43a393ad32c14383750, type: 2}
+  - {fileID: 11400000, guid: 803f7f90dd973414d94c43b999a63060, type: 2}
+  - {fileID: 11400000, guid: 30a881979a6a7499f9900418eb38493d, type: 2}

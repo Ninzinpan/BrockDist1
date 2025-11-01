@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: be218cdb497654196824771c3006edb8, type: 3}
-  m_Name: MaxBallsUp
+  m_Name: MaxHealthUp
   m_EditorClassIdentifier: 
-  buffName: Max Balls Up
-  buffIcon: {fileID: 6554300753923588988, guid: cb9563be481a64b29b53d0df78155925, type: 3}
+  buffName: Max Health UP
+  buffIcon: {fileID: 4606908045521496030, guid: d5a76bad754a549fa9ab947f8360f62e, type: 3}
   isOneTimeEffect: 0
-  statToBuff: 0
-  enhancementValue: 5
+  statToBuff: 3
+  enhancementValue: 1

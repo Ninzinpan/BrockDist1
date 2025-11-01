@@ -31,18 +31,21 @@ public class LocalizationManager : MonoBehaviour
         // --- 名前用の辞書 ---
         // キーは BuffData.buffName と一致させる
         nameTranslations.Add("Health Recovery", "体力回復");
+        nameTranslations.Add("Max Health Up", "最大体力アップ");
         nameTranslations.Add("Fire Rate Up", "連射速度アップ");
         nameTranslations.Add("Max Balls Up", "最大ボール数アップ");
         nameTranslations.Add("Ball Damage Up", "ボール攻撃力アップ");
-        nameTranslations.Add("Speed Up", "移動速度アップ"); // (Speed用に追加)
+        nameTranslations.Add("Speed Up", "ボール速度アップ"); // (Speed用に追加)
 
         // --- 説明文用の辞書 ---
         // キーは BuffData.buffName と一致させる
-        descriptionTemplates.Add("Health Recovery", "体力を 1 ポイント回復する");
-        descriptionTemplates.Add("Fire Rate Up", "連射間隔が {value} 秒短縮される");
-        descriptionTemplates.Add("Max Balls Up", "ボールの最大数が {value} 個増加する");
-        descriptionTemplates.Add("Ball Damage Up", "ボールの攻撃力が {value} ポイント強化");
-        descriptionTemplates.Add("Speed Up", "移動速度が {value} 増加する");
+        descriptionTemplates.Add("Health Recovery", "体力を 2 ポイント回復する");
+        descriptionTemplates.Add("Max Health Up", "体力がmaxを超えて{value} 回復");
+
+        descriptionTemplates.Add("Fire Rate Up", "連射間隔が {value} 秒短縮");
+        descriptionTemplates.Add("Max Balls Up", "ボールの最大数が {value} 個増加");
+        descriptionTemplates.Add("Ball Damage Up", "ボールの攻撃力が {value} 増加");
+        descriptionTemplates.Add("Speed Up", "移動速度が {value} 増加");
     }
 
     /// <summary>

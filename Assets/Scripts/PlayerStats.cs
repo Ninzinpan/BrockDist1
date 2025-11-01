@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -11,6 +12,8 @@ public class PlayerStats : MonoBehaviour
     public float baseBallDamage = 1f;
     public float baseSpeed = 10f;
 
+    public float ball_speed = 5f;
+
     // --- バフ管理台帳 ---
     public Dictionary<BuffData, int> buffLevels = new Dictionary<BuffData, int>();
 
@@ -20,6 +23,8 @@ public class PlayerStats : MonoBehaviour
     public int CurrentMaxBalls { get; private set; }
     public float CurrentBallDamage { get; private set; }
     public float CurrentSpeed { get; private set; }
+
+    public float CurrentBallSpeed { get; private set; }
     public static PlayerStats Instance { get; private set; }
     // --- イベント ---
     public UnityEvent OnStatsRecalculated;
@@ -103,6 +108,7 @@ public class PlayerStats : MonoBehaviour
         CurrentMaxBalls = baseMaxBalls;
         CurrentBallDamage = baseBallDamage;
         CurrentSpeed = baseSpeed;
+        CurrentBallSpeed = ball_speed;
 
         foreach (var buffEntry in buffLevels)
         {
@@ -113,6 +119,7 @@ public class PlayerStats : MonoBehaviour
             {
                 case StatType.MaxHP:
                     CurrentMaxHp += buff.enhancementValue * level;
+
                     break;
                 case StatType.FireRate:
                     CurrentSpawnInterval += buff.enhancementValue * level;
@@ -124,16 +131,24 @@ public class PlayerStats : MonoBehaviour
                     CurrentBallDamage += buff.enhancementValue * level;
                     break;
                 case StatType.Speed:
-                    CurrentSpeed += buff.enhancementValue * level;
+                    CurrentBallSpeed += buff.enhancementValue * level;
                     break;
             }
         }
-        
+
         if (CurrentSpawnInterval < 0.05f)
         {
             CurrentSpawnInterval = 0.05f;
         }
-        
+
         OnStatsRecalculated.Invoke();
     }
+    /// <summary>
+/// GameManagerから呼ばれ、プレイヤーの状態をリセットする
+/// </summary>
+public void ResetPlayerState()
+{
+    // 自分の相棒である PadController にリセットを命令
+    padController.ResetState();
+}
 }

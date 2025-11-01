@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: SpeedUp
   m_EditorClassIdentifier: 
   buffName: Speed Up
-  buffIcon: {fileID: -841725066855264754, guid: 063578b81847f40c3ab2408909ec84a0, type: 3}
+  buffIcon: {fileID: -4789157633944878854, guid: 8606bcb38499d42ab9dfd5f55d5b9ff7, type: 3}
   isOneTimeEffect: 0
   statToBuff: 4
   enhancementValue: 3

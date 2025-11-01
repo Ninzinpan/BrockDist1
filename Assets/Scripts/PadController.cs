@@ -176,6 +176,7 @@ public class PadController : MonoBehaviour
         UpdateHpBar(); 
         if (currentHp <= 0)
         {
+            Time.timeScale = 0f;
             Die();
         }
         else
@@ -231,9 +232,28 @@ public class PadController : MonoBehaviour
     private void Die()
     {
         isAlive = false;
-        if(spriteRenderer != null)
+        if (spriteRenderer != null)
         {
             spriteRenderer.color = Color.gray;
         }
+        GameManager.Instance.StartGameOverSequence();
+    }
+    /// <summary>
+/// PlayerStatsから呼ばれ、HPや生存状態をリセットする
+/// </summary>
+public void ResetState()
+    {
+    // PlayerStatsから最新の最大HPを取得して全回復
+    currentHp = playerStats.CurrentMaxHp;
+    isAlive = true;
+
+    // 色を元に戻す
+    if(spriteRenderer != null)
+    {
+        spriteRenderer.color = originalColor;
+    }
+
+    // HPバーを（見つけていれば）更新
+    UpdateHpBar();
     }
 }

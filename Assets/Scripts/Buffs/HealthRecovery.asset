@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: HealthRecovery
   m_EditorClassIdentifier: 
   buffName: Health Recovery
-  buffIcon: {fileID: -841725066855264754, guid: 063578b81847f40c3ab2408909ec84a0, type: 3}
+  buffIcon: {fileID: 4606908045521496030, guid: d5a76bad754a549fa9ab947f8360f62e, type: 3}
   isOneTimeEffect: 1
-  statToBuff: 3
-  enhancementValue: 1
+  statToBuff: 5
+  enhancementValue: 2
