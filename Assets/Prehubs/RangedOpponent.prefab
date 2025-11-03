@@ -208,8 +208,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a00ec69ab1db43b09775e281f607120, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHp: 4
+  maxHp: 8
   moveSpeed: 0.5
+  inScreenMoveSpeed: 0
+  inScreenYBoundary: 4.5
   damageToPlayer: 1
   flashColor: {r: 1, g: 0, b: 0, a: 1}
   invincibleDuration: 0.2

@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 4109415519837090393}
   - component: {fileID: 2466022946833122604}
   m_Layer: 8
-  m_Name: EleteOpponent
+  m_Name: FastOpponent
   m_TagString: Opponent
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -105,8 +105,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a00ec69ab1db43b09775e281f607120, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHp: 15
-  moveSpeed: 0.75
+  maxHp: 10
+  moveSpeed: 0.5
+  inScreenMoveSpeed: 1
+  inScreenYBoundary: 4.5
   damageToPlayer: 1
   flashColor: {r: 1, g: 0, b: 0, a: 1}
   invincibleDuration: 0.2

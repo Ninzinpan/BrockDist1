@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -36,24 +37,26 @@ public class PlayerStats : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-        // 既にPad/PlayerStatsが存在する場合、
-        // この（新しくロードされた）Padを破棄
-        Destroy(gameObject);
-        return; // Awakeの残り処理を中断
+            // 既にPad/PlayerStatsが存在する場合、
+            // この（新しくロードされた）Padを破棄
+            Destroy(gameObject);
+            return; // Awakeの残り処理を中断
         }
-    Instance = this;
+        Instance = this;
 
-    // 2. このオブジェクト（Pad）をシーン移動で破棄しない
-    DontDestroyOnLoad(gameObject);
+        // 2. このオブジェクト（Pad）をシーン移動で破棄しない
+        DontDestroyOnLoad(gameObject);
         // ★ 2. PadController への参照を取得
-        padController = GetComponent<PadController>(); 
-        if(padController == null)
+        padController = GetComponent<PadController>();
+        if (padController == null)
         {
             Debug.LogError("PadController が PlayerStats と同じオブジェクトにありません！");
         }
-        
+
         RecalculateStats();
     }
+
+
 
     /// <summary>
     /// バフをプレイヤーに追加する（UpgradeUIなどから呼ばれる）
@@ -118,20 +121,20 @@ public class PlayerStats : MonoBehaviour
             switch (buff.statToBuff)
             {
                 case StatType.MaxHP:
-                    CurrentMaxHp += buff.enhancementValue * level;
+                    CurrentMaxHp += buff.enhancementValue;
 
                     break;
                 case StatType.FireRate:
-                    CurrentSpawnInterval += buff.enhancementValue * level;
+                    CurrentSpawnInterval += buff.enhancementValue;
                     break;
                 case StatType.MaxBalls:
-                    CurrentMaxBalls += (int)(buff.enhancementValue * level);
+                    CurrentMaxBalls += (int)(buff.enhancementValue);
                     break;
                 case StatType.BallDamage:
-                    CurrentBallDamage += buff.enhancementValue * level;
+                    CurrentBallDamage += buff.enhancementValue;
                     break;
                 case StatType.Speed:
-                    CurrentBallSpeed += buff.enhancementValue * level;
+                    CurrentBallSpeed += buff.enhancementValue;
                     break;
             }
         }

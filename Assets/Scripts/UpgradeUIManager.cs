@@ -2,14 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class UpgradeUIManager : MonoBehaviour
 {
-    // ★ 1. nextSceneName 変数を削除
-    // [Header("Next Scene")]
-    // public string nextSceneName = "Stage2"; 
-
-    // --- 3つの選択肢ボタンの参照 ---
     [Header("Choice Button 1")]
     public Button choiceButton1;
     public Image choiceIcon1;
@@ -28,12 +24,11 @@ public class UpgradeUIManager : MonoBehaviour
     public TextMeshProUGUI choiceNameText3;
     public TextMeshProUGUI choiceDescText3; 
 
-    // --- 内部で保持するデータ ---
     private PlayerStats playerStats;
     private LocalizationManager l10n;
-    private GameManager gameManager; // ★ 2. GameManager への参照を追加
+    private GameManager gameManager;
     public static UpgradeUIManager Instance { get; private set; }
-    // Awake() または Start() で参照を取得
+
     void Awake()
     {
         if (Instance != null && Instance != this)
@@ -46,18 +41,11 @@ public class UpgradeUIManager : MonoBehaviour
     }
     void Start()
     {
-        // 永続化オブジェクトへの参照を取得
         l10n = LocalizationManager.Instance;
         gameManager = GameManager.Instance; 
 
-        if(l10n == null)
-        {
-            Debug.LogError("LocalizationManager がシーンにありません！");
-        }
-        if (gameManager == null)
-        {
-            Debug.LogError("GameManager がシーンにありません！");
-        }
+        if(l10n == null) Debug.LogError("LocalizationManager がシーンにありません！");
+        if (gameManager == null) Debug.LogError("GameManager がシーンにありません！");
     }
 
     /// <summary>
@@ -67,17 +55,40 @@ public class UpgradeUIManager : MonoBehaviour
     {
         this.playerStats = stats; 
 
-        // UIを先にアクティブにする（Start()が呼ばれていない場合のため）
-        gameObject.SetActive(true);
+        // 1. まず時間を止める（UIは既にGameManagerによって表示されている）
         Time.timeScale = 0f;
         
-        // l10n と gameManager が null なら、Start() を強制的に呼ぶ（保険）
-        if (l10n == null) Start(); 
+        // 2. l10n が null なら Start() を呼ぶ（保険）
+        if (l10n == null) Start();
 
+        // 3. ★まずボタンを非表示にする
+        choiceButton1.gameObject.SetActive(false);
+        choiceButton2.gameObject.SetActive(false);
+        choiceButton3.gameObject.SetActive(false);
+
+        // 4. ボタンの中身をセットアップ（非表示のまま）
         SetupButton(choiceButton1, choiceIcon1, choiceNameText1, choiceDescText1, choice1);
         SetupButton(choiceButton2, choiceIcon2, choiceNameText2, choiceDescText2, choice2);
         SetupButton(choiceButton3, choiceIcon3, choiceNameText3, choiceDescText3, choice3);
+
+        // 5. ボタンを遅れて表示するコルーチンを開始
+        StartCoroutine(ShowButtonsAfterDelay(0.5f));
     }
+
+    /// <summary>
+    /// ボタンを遅れて表示するコルーチン
+    /// </summary>
+    private IEnumerator ShowButtonsAfterDelay(float delay)
+    {
+        // リアルタイムで待機
+        yield return new WaitForSecondsRealtime(delay);
+
+        // 準備が完了したボタンを表示
+        choiceButton1.gameObject.SetActive(true);
+        choiceButton2.gameObject.SetActive(true);
+        choiceButton3.gameObject.SetActive(true);
+    }
+
 
     private void SetupButton(Button button, Image icon, TextMeshProUGUI nameText, TextMeshProUGUI descText, BuffData buff)
     {
@@ -109,7 +120,10 @@ public class UpgradeUIManager : MonoBehaviour
         else
         {
             int nextLevel = currentLevel + 1; 
-            float totalEffectValue = buff.enhancementValue * nextLevel;
+            
+            // ★ 6. ユーザーの仕様（変更）に戻す
+            //    (「+1」や「-0.05」など、1レベルあたりの上昇値のみを表示)
+            float totalEffectValue = buff.enhancementValue; 
             
             nameText.text = $"{translatedName} Lv.{nextLevel}";
             descText.text = translatedDescTemplate.Replace("{value}", Mathf.Abs(totalEffectValue).ToString("F2"));
@@ -119,36 +133,16 @@ public class UpgradeUIManager : MonoBehaviour
         button.onClick.AddListener(() => OnChoiceMade(buff) );
     }
 
-    /// <summary>
-    /// いずれかのボタンが押された時に呼ばれる
-    /// </summary>
-    /// <summary>
-    /// いずれかのボタンが押された時に呼ばれる
-    /// </summary>
     private void OnChoiceMade(BuffData chosenBuff)
     {
-        // 1. PlayerStats に選んだバフを渡す
         if (playerStats != null)
         {
             playerStats.AddBuff(chosenBuff);
         }
 
-        // 2. UIを非表示にする
         gameObject.SetActive(false);
-        
-        // 3. ゲーム時間を戻す（★これは残す）
         Time.timeScale = 1f;
-
-        // ★ 4. シーン遷移のロジックを削除（またはコメントアウト）
-        /*
-        if (gameManager != null)
-        {
-            gameManager.LoadNextStage();
-        }
-        else
-        {
-            Debug.LogError("GameManager が null のため、次のステージに進めません！");
-        }
-        */
+        
+        // (シーン遷移のロジックは削除済み)
     }
 }

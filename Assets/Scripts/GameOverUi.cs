@@ -3,22 +3,23 @@ using UnityEngine.UI;
 
 public class GameOverUI : MonoBehaviour
 {
-    // ★ 1. シングルトン化
     public static GameOverUI Instance { get; private set; }
 
     [Header("References")]
-    public Button restartButton;
+    public Button restartButton; // リスタートボタン
+    
+    // --- ★ 1. ホームボタン用の変数を追加 ---
+    public Button homeButton;    // ホームに戻るボタン
 
     void Awake()
     {
-        // ★ 2. シングルトン ＋ 永続化ロジック
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject); // 既に存在したら自分を破棄
+            Destroy(gameObject); 
             return;
         }
         Instance = this;
-        DontDestroyOnLoad(gameObject); // シーンをまたいで永続化
+        DontDestroyOnLoad(gameObject); 
     }
 
     void Start()
@@ -27,6 +28,12 @@ public class GameOverUI : MonoBehaviour
         if (restartButton != null)
         {
             restartButton.onClick.AddListener(OnRestartPressed);
+        }
+        
+        // --- ★ 2. ホームボタンにもリスナーを設定 ---
+        if (homeButton != null)
+        {
+            homeButton.onClick.AddListener(OnHomePressed);
         }
         
         // 4. 起動時は必ず非表示にしておく
@@ -42,13 +49,26 @@ public class GameOverUI : MonoBehaviour
         }
     }
 
+    // --- ★ 3. ホームボタン用のメソッドを新設 ---
+    /// <summary>
+    /// ホームボタンが押された時に呼ばれる
+    /// </summary>
+    void OnHomePressed()
+    {
+        // 6. GameManagerに「ホームへ戻る」よう依頼
+        if (GameManager.Instance != null)
+        {
+            // (GameManager側で永続オブジェクトの破棄とシーン遷移を行う)
+            GameManager.Instance.ReturnToHome();
+        }
+    }
+
     /// <summary>
     /// GameManagerから呼ばれ、UIを表示する
     /// </summary>
     public void Show()
     {
         gameObject.SetActive(true);
-        // (ここでフェードインなどの演出を開始してもよい)
     }
 
     /// <summary>

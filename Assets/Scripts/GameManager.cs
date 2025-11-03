@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI; // ★ 1. Slider を使うために必要
+using UnityEngine.UI;
 using Random = UnityEngine.Random; 
 
 public class GameManager : MonoBehaviour
@@ -10,25 +10,23 @@ public class GameManager : MonoBehaviour
     [Header("UI References (Persistent)")]
     private UpgradeUIManager upgradeUI; 
     private GameOverUI gameOverUI; 
+    // private GameClearUI gameClearUI; // ★ 1. クリアUIへの参照を削除
 
-    // --- ★ 2. ここから XP の設定を追加 ---
     [Header("XP Scaling")]
-    public int baseKillsNeeded = 10; // 最初のレベルアップに必要な討伐数
-    public int additionalKillsPerLevel = 5; // レベルアップごとに追加で必要になる討伐数
-    // --- 追加ここまで ---
+    public int baseKillsNeeded = 10;
+    public int additionalKillsPerLevel = 5;
 
     // --- 内部変数 ---
     private PlayerStats playerStats;
     private StageData currentStageData; 
-    private bool isGameOver = false;
+    private bool isGameFinished = false; // ゲーム終了フラグ
 
-    // --- ★ 3. XP関連の内部変数を追加 ---
-    private int currentKillCount;  // 現在の討伐数（XP）
-    private int killsNeededForLevelUp; // 次のレベルアップに必要な討伐数
-    private int upgradeCount; // アップグレード（レベルアップ）した回数
-    
-    private Slider xpBarSlider; // ★ 4. XPバーのSliderへの参照
-    // ---
+    // --- カウンター ---
+    private int currentKillCount;  
+    private int currentEnemyCount; // ★ 2. ステージクリア用のカウンター
+    private int upgradeCount; 
+    private int killsNeededForLevelUp;
+    private Slider xpBarSlider;
 
     public static GameManager Instance { get; private set; }
 
@@ -45,7 +43,6 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        // 永続化オブジェクトへの参照を「最初」に1回だけ取得
         playerStats = PlayerStats.Instance;
         upgradeUI = UpgradeUIManager.Instance; 
         gameOverUI = GameOverUI.Instance; 
@@ -54,8 +51,12 @@ public class GameManager : MonoBehaviour
         if (upgradeUI == null) Debug.LogError("UpgradeUIManager が見つかりません！");
         if (gameOverUI == null) Debug.LogError("GameOverUI が見つかりません！");
 
-        SceneManager.sceneLoaded += OnSceneLoaded; 
+        SceneManager.sceneLoaded += OnSceneLoaded;
         OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
+
+
+        
+        
     }
 
     void OnDestroy()
@@ -63,30 +64,20 @@ public class GameManager : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
-    /// <summary>
-    /// シーンがロードされるたびに呼び出されるメソッド
-    /// </summary>
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        isGameOver = false; 
+        isGameFinished = false; 
         
-        // 永続化UIを隠す
         if (upgradeUI != null) upgradeUI.gameObject.SetActive(false);
         if (gameOverUI != null) gameOverUI.Hide(); 
+        // if (gameClearUI != null) gameClearUI.Hide(); // ★ 3. 削除
 
-        // ステージ設計図を取得
+        // (StageDataLink を探す処理...)
         SceneDataLink dataLink = FindFirstObjectByType<SceneDataLink>();
-        if (dataLink != null)
-        {
-            currentStageData = dataLink.currentStageData;
-        }
-        else
-        {
-            Debug.LogError("このシーン(" + scene.name + ")に SceneDataLink がありません！");
-            currentStageData = null;
-        }
+        if (dataLink != null) currentStageData = dataLink.currentStageData;
+        else Debug.LogError("このシーン(" + scene.name + ")に SceneDataLink がありません！");
 
-        // ステージ開始UIを起動
+        // (StageStartDisplay を探す処理...)
         Time.timeScale = 0f;
         StageStartDisplay stageStartUI = FindFirstObjectByType<StageStartDisplay>();
         if (stageStartUI != null)
@@ -95,17 +86,17 @@ public class GameManager : MonoBehaviour
             string displayName = (currentStageData != null) ? currentStageData.stageDisplayNameKey : scene.name;
             stageStartUI.StartSequence(displayName);
         }
-        else
-        {
-            Time.timeScale = 1f; 
-        }
+        else Time.timeScale = 1f; 
 
-        // --- ★ 5. 敵の数ではなく、XPシステムを初期化 ---
+        // XPシステムを初期化
         currentKillCount = 0;
         upgradeCount = 0; 
         killsNeededForLevelUp = baseKillsNeeded;
 
-        // ★ 6. XPバーを探して初期化
+        // 「残り敵数」のカウンターも初期化
+        currentEnemyCount = FindObjectsByType<Opponent>(FindObjectsSortMode.None).Length;
+
+        // (XPバーを探す処理...)
         GameObject xpBarGO = GameObject.FindGameObjectWithTag("XPBar");
         if (xpBarGO != null)
         {
@@ -116,12 +107,7 @@ public class GameManager : MonoBehaviour
                 xpBarSlider.value = 0;
             }
         }
-        else
-        {
-            Debug.LogWarning("このシーンに 'XPBar' タグのオブジェクトがありません");
-            xpBarSlider = null;
-        }
-        // ---
+        else Debug.LogWarning("このシーンに 'XPBar' タグのオブジェクトがありません");
     }
 
     /// <summary>
@@ -129,77 +115,40 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void OnEnemyDefeated()
     {
-        if (isGameOver) return; // ゲームオーバー後はカウントしない
+        if (isGameFinished) return; 
 
-        // --- ★ 7. 敵カウントダウンから、XPカウントアップ処理に変更 ---
-
-        // 1. 討伐数（XP）を加算
+        // 1. XP処理
         currentKillCount++;
+        if (xpBarSlider != null) xpBarSlider.value = currentKillCount;
 
-        // 2. XPバーのUIを更新
-        if (xpBarSlider != null)
-        {
-            xpBarSlider.value = currentKillCount;
-        }
-
-        // 3. レベルアップ判定
         if (currentKillCount >= killsNeededForLevelUp)
         {
-            // 4. アップグレードUIを表示 (UI側が Time.timeScale = 0 にする)
             ShowUpgradeChoices(); 
-
-            // 5. XPとレベルをリセット・再計算
-            currentKillCount = 0; // XPをリセット
-            upgradeCount++; // アップグレード回数を増やす
-
-            // 6. 次の目標値を計算（線形増加）
+            currentKillCount = 0; 
+            upgradeCount++; 
             killsNeededForLevelUp = baseKillsNeeded + (additionalKillsPerLevel * upgradeCount);
-            
-            // 7. UIの最大値と現在値を更新
             if (xpBarSlider != null)
             {
                 xpBarSlider.maxValue = killsNeededForLevelUp;
-                xpBarSlider.value = currentKillCount; // 0に戻す
+                xpBarSlider.value = currentKillCount;
             }
         }
-        // --- 
-    }
-    
-    // (StartGameOverSequence, GameOverRoutine, RestartStage は変更なし)
-    
-    public void StartGameOverSequence()
-    {
-        if (isGameOver) return; 
-        isGameOver = true;
-        StartCoroutine(GameOverRoutine());
-    }
 
-    private IEnumerator GameOverRoutine()
-    {
-        yield return new WaitForSeconds(1.0f);
-        if (gameOverUI != null)
+        // --- ★ 4. 全滅処理を修正 ---
+        currentEnemyCount--;
+        if (currentEnemyCount <= 0)
         {
-            gameOverUI.Show();
-        }
-        else
-        {
-            Debug.LogError("GameOverUI が見つかりません！");
+            // 敵が全滅した
+            isGameFinished = true; // ゲーム終了
+            Time.timeScale = 0f; // 時間を止める
+            ReturnToHome(); // 即座にホームに戻る
         }
     }
-
-    public void RestartStage()
-    {
-        if (PlayerStats.Instance != null)
-        {
-            PlayerStats.Instance.ResetPlayerState();
-        }
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
-
-    // (ShowUpgradeChoices, LoadNextStage, OnEnemySpawned は変更なし)
     
+    // (ShowUpgradeChoices は変更なし)
     private void ShowUpgradeChoices()
     {
+        // (中身は同じ)
         if (currentStageData == null || currentStageData.availableBuffs == null || currentStageData.availableBuffs.Count == 0)
         {
             Debug.LogError("現在の StageData にバフが設定されていません！");
@@ -227,25 +176,75 @@ public class GameManager : MonoBehaviour
         }
         if (upgradeUI != null && playerStats != null)
         {
+            upgradeUI.gameObject.SetActive(true); 
             upgradeUI.DisplayChoices(playerStats, choice1, choice2, choice3);
         }
     }
-    
-    public void LoadNextStage()
+
+    // (GameOver関連のメソッドは変更なし)
+    public void StartGameOverSequence()
     {
-        if (currentStageData != null && !string.IsNullOrEmpty(currentStageData.nextSceneName))
+        if (isGameFinished) return; 
+        isGameFinished = true; 
+        StartCoroutine(GameOverRoutine());
+    }
+
+    private IEnumerator GameOverRoutine()
+    {
+        yield return new WaitForSecondsRealtime(1.0f);
+        if (GameOverUI.Instance != null)
         {
-            SceneManager.LoadScene(currentStageData.nextSceneName);
+            GameOverUI.Instance.Show();
         }
-        else
+        else Debug.LogError("GameOverUI が見つかりません！");
+    }
+
+    public void RestartStage()
+    {
+        Time.timeScale = 1f;
+        if (PlayerStats.Instance != null)
         {
-            Debug.LogError("次のステージ名(Next Scene Name)が StageData に設定されていません！");
+            PlayerStats.Instance.ResetPlayerState();
         }
+        if (BGMPlayer.Instance != null)
+        {
+            BGMPlayer.Instance.PlayMusic();
+        }
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    // --- ★ 5. ReturnToHome メソッドを修正 ---
+    /// <summary>
+    /// ゲームクリア時（またはUIから）タイトルに戻る
+    /// </summary>
+    public void ReturnToHome()
+    {
+        Time.timeScale = 1f; // 時間を戻す
+
+        // BGMを止める
+        if (BGMPlayer.Instance != null)
+        {
+            BGMPlayer.Instance.StopMusic();
+        }
+
+        // すべての永続化オブジェクトを破棄
+        if (PlayerStats.Instance != null) Destroy(PlayerStats.Instance.gameObject);
+        if (PersistentBuffUI.Instance != null) Destroy(PersistentBuffUI.Instance.gameObject);
+        if (UpgradeUIManager.Instance != null) Destroy(UpgradeUIManager.Instance.gameObject);
+        if (GameOverUI.Instance != null) Destroy(GameOverUI.Instance.gameObject);
+        // if (GameClearUI.Instance != null) Destroy(GameClearUI.Instance.gameObject); // 削除
+        if (LocalizationManager.Instance != null) Destroy(LocalizationManager.Instance.gameObject);
+        if (BGMPlayer.Instance != null) Destroy(BGMPlayer.Instance.gameObject);
+        
+        // 最後に自分自身を破棄
+        Destroy(gameObject);
+
+        // タイトルシーン（SampleScene）をロード
+        SceneManager.LoadScene("SampleScene");
     }
     
     public void OnEnemySpawned()
     {
-        // (このメソッドは現在使われていないが、将来のスポナーのために残しておく)
-        // currentEnemyCount++; 
+        // (OnSceneLoaded でカウント)
     }
 }

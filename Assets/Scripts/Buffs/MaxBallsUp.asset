@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: MaxBallsUp
   m_EditorClassIdentifier: 
   buffName: Max Balls Up
-  buffIcon: {fileID: 6554300753923588988, guid: cb9563be481a64b29b53d0df78155925, type: 3}
+  buffIcon: {fileID: -5418743274944874454, guid: 6a3a9ee39c6a74133b24b4c3e97b6c8e, type: 3}
   isOneTimeEffect: 0
   statToBuff: 0
-  enhancementValue: 5
+  enhancementValue: 3

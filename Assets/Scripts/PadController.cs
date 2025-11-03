@@ -195,6 +195,11 @@ public class PadController : MonoBehaviour
         if (currentHp <= 0)
         {
             Time.timeScale = 0f;
+
+            if (BGMPlayer.Instance != null)
+            {
+                BGMPlayer.Instance.StopMusic();
+            }
             Die();
         }
         else
@@ -265,11 +270,16 @@ public void ResetState()
     currentHp = playerStats.CurrentMaxHp;
     isAlive = true;
 
-    // 色を元に戻す
-    if(spriteRenderer != null)
-    {
-        spriteRenderer.color = originalColor;
-    }
+        // 色を元に戻す
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = originalColor;
+        }
+    
+    if (BGMPlayer.Instance != null)
+        {
+            BGMPlayer.Instance.PlayMusic();
+        }
 
     // HPバーを（見つけていれば）更新
     UpdateHpBar();

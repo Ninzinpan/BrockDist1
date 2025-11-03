@@ -3,12 +3,21 @@ using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(SpriteRenderer))]
-[RequireComponent(typeof(AudioSource))] // ★ 1. AudioSource が必須であることを明記
+[RequireComponent(typeof(AudioSource))] 
 public class Opponent : MonoBehaviour
 {
     [Header("Stats")]
     public float maxHp = 3f;
-    public float moveSpeed = 1f;
+    public float moveSpeed = 1f; // 画面外（初期）の移動速度
+    
+    [Tooltip("画面内に入った（Topタグに触れた）後の移動速度。0のままなら moveSpeed を使い続ける")]
+    public float inScreenMoveSpeed = 0f; 
+
+    // --- ★ 1. ここから追加 ---
+    [Header("Screen Boundary")]
+    [Tooltip("このY座標（ワールド座標）より下に移動したら、画面内とみなす")]
+    public float inScreenYBoundary = 4.5f;
+    // --- 追加ここまで ---
 
     [Header("On Ground Contact")]
     public float damageToPlayer = 1f; 
@@ -17,20 +26,17 @@ public class Opponent : MonoBehaviour
     public Color flashColor = Color.red;
     public float invincibleDuration = 0.2f;
 
-    // --- ★ 2. ここから追加 ---
     [Header("Audio")]
-    public AudioClip hitSound; // Inspectorで設定する音ファイル
-
-    public AudioClip deathSound; // 敵が倒されたときの音
+    public AudioClip hitSound; 
+    public AudioClip deathSound; 
     
-    private AudioSource audioSource; // スピーカーコンポーネント
-    // --- 追加ここまで ---
-
+    private AudioSource audioSource; 
 
     // --- 内部変数 ---
     private float currentHp;
     private bool isMoving = true;
     private bool isInvincible = false;
+    private bool hasEnteredScreen = false; // ★ 2. 画面内に既に入ったか
 
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
@@ -45,17 +51,15 @@ public class Opponent : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         originalColor = spriteRenderer.color;
-
-        // ★ 3. 自分の AudioSource を取得
         audioSource = GetComponent<AudioSource>(); 
     }
 
     void Start()
     {
-        // (Start() の中身は変更なし)
         currentHp = maxHp;
         isMoving = true;
         isInvincible = false;
+        hasEnteredScreen = false; // ★ 3. 初期化
         
         player = FindFirstObjectByType<PadController>();
         playerStats = FindFirstObjectByType<PlayerStats>();
@@ -66,26 +70,46 @@ public class Opponent : MonoBehaviour
         if (gameManager == null) Debug.LogError("シーンに GameManager が見つかりません！", this);
     }
 
-    // (FixedUpdate は変更なし)
+    // --- ★ 4. FixedUpdate を修正 ---
     void FixedUpdate()
     {
         if (isMoving)
         {
+            // 1. まだ画面内に入っていないかチェック
+            if (!hasEnteredScreen)
+            {
+                // 2. 自分のY座標が、設定したY座標より下に来たかチェック
+                if (transform.position.y < inScreenYBoundary)
+                {
+                    // 3. 画面内に入った
+                    hasEnteredScreen = true;
+
+                    // 4. Inspectorで inScreenMoveSpeed が設定されていれば速度を更新
+                    if (inScreenMoveSpeed > 0f)
+                    {
+                        moveSpeed = inScreenMoveSpeed;
+                    }
+                }
+            }
+
+            // 5. （更新された可能性のある）moveSpeed で移動
             rb.linearVelocity = Vector2.down * moveSpeed;
         }
     }
     
+    // ★ 5. OnTriggerEnter2D は（Topタグに関しては）不要
+    // void OnTriggerEnter2D(Collider2D other) { ... }
+
+    // ★ 6. OnCollisionEnter2D は（Topタグの処理がないまま）
     void OnCollisionEnter2D(Collision2D collision)
     {
+        // "Ball" タグに触れたか
         if (collision.gameObject.CompareTag("Ball"))
         {
-            // --- ★ 4. 音を再生 ---
             if (hitSound != null)
             {
-                // PlayOneShot を使うと、音が重なっても正しく再生される
                 audioSource.PlayOneShot(hitSound);
             }
-            // --- 再生ここまで ---
 
             if (playerStats != null)
             {
@@ -97,6 +121,7 @@ public class Opponent : MonoBehaviour
             }
         }
         
+        // "Ground" タグに触れたか
         if (collision.gameObject.CompareTag("Ground"))
         {
             isMoving = false;
@@ -112,7 +137,6 @@ public class Opponent : MonoBehaviour
     }
     
     // (HandleDamage, InvincibleFlashRoutine, Die は変更なし)
-    // ...
     private void HandleDamage(float damageAmount)
     {
         if (isInvincible || currentHp <= 0) return;
@@ -138,7 +162,8 @@ public class Opponent : MonoBehaviour
     {
         if (deathSound != null)
         {
-AudioSource.PlayClipAtPoint(deathSound, transform.position);        }
+            AudioSource.PlayClipAtPoint(deathSound, transform.position);
+        }
         if (gameManager != null)
         {
             gameManager.OnEnemyDefeated();
