@@ -140,7 +140,7 @@ public class PadController : MonoBehaviour
     void Update()
     {
   
-        if (!isAlive) return; 
+        if (!isAlive) return;
         HandleSpawning();
     }
     private void HandleMovement()

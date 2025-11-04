@@ -121,20 +121,20 @@ public class PlayerStats : MonoBehaviour
             switch (buff.statToBuff)
             {
                 case StatType.MaxHP:
-                    CurrentMaxHp += buff.enhancementValue;
+                    CurrentMaxHp += buff.enhancementValue*level;
 
                     break;
                 case StatType.FireRate:
-                    CurrentSpawnInterval += buff.enhancementValue;
+                    CurrentSpawnInterval += buff.enhancementValue*level;
                     break;
                 case StatType.MaxBalls:
-                    CurrentMaxBalls += (int)(buff.enhancementValue);
+                    CurrentMaxBalls += (int)(buff.enhancementValue)*level;
                     break;
                 case StatType.BallDamage:
-                    CurrentBallDamage += buff.enhancementValue;
+                    CurrentBallDamage += buff.enhancementValue*level;
                     break;
                 case StatType.Speed:
-                    CurrentBallSpeed += buff.enhancementValue;
+                    CurrentBallSpeed += buff.enhancementValue*level;
                     break;
             }
         }

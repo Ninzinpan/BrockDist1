@@ -108,6 +108,8 @@ public class GameManager : MonoBehaviour
             }
         }
         else Debug.LogWarning("このシーンに 'XPBar' タグのオブジェクトがありません");
+
+
     }
 
     /// <summary>
@@ -242,7 +244,7 @@ public class GameManager : MonoBehaviour
         // タイトルシーン（SampleScene）をロード
         SceneManager.LoadScene("SampleScene");
     }
-    
+
     public void OnEnemySpawned()
     {
         // (OnSceneLoaded でカウント)
